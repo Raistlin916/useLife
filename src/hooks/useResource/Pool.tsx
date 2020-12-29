@@ -24,25 +24,7 @@ const ResourcePool = ({ children }: { children: ReactNode }) => {
   return <PoolCtx.Provider value={pool}>{children}</PoolCtx.Provider>
 }
 
-type CacheId = string | number
-
-const requestCache: { [key: string]: { [key: string]: any } } = {}
-const withCache = <CacheId, O>(
-  scope: string,
-  factory: Factory<CacheId[], O[]>
-) => (input: CacheId[]): O[] => {
-  const id = JSON.stringify(input)
-  let scopeCache = requestCache[scope]
-  if (!scopeCache) {
-    requestCache[scope] = {}
-    scopeCache = requestCache[scope]
-  }
-  if (scopeCache[id]) {
-    return scopeCache[id]
-  }
-  scopeCache[id] = factory(input)
-  return scopeCache[id]
-}
+type CacheId = string
 
 export const useResourcePool = <O,>(
   scope: string,
@@ -53,21 +35,79 @@ export const useResourcePool = <O,>(
   const pool = useContext(PoolCtx)
   const map = pool.get<O>(scope)
 
+  const residue: CacheId[] = []
+  const result = input.map((id) => {
+    if (map.has(id)) {
+      return map.get(id) as O
+    }
+    residue.push(id)
+    return initialValue
+  })
   const resource = useResource<CacheId[], O[]>(
     async (_input) => {
       if (!_input.length) {
         return []
       }
-      const residue = _input.filter((id) => !map.has(id))
-      const response =
-        residue.length > 0 ? await withCache(scope, factory)(residue) : []
-      response.forEach((item, index) => map.set(residue[index], item))
-      return _input.map((id) => map.get(id) || initialValue)
+      const data = await factory(_input)
+      data.forEach((item, index) => map.set(_input[index], item))
+      return data
     },
-    input,
-    input.map(() => initialValue)
+    residue,
+    residue.map(() => initialValue)
   )
 
+  return {
+    ...resource,
+    data: result,
+  }
+}
+
+type StringMap<T> = { [key: string]: T }
+
+export const useResourcePoolMap = <I, O>(
+  scope: string,
+  factory: Factory<I, StringMap<O>>,
+  params: I,
+  initialValue: Map<CacheId, O> = new Map()
+): ResourceType<I, Map<CacheId, O>> => {
+  const pool = useContext(PoolCtx)
+
+  const resource = useResource<I, Map<CacheId, O>>(
+    async (_params) => {
+      const hash = JSON.stringify(params)
+      const map = pool.get<O>(`${scope}#${hash}`)
+      const data = await factory(_params)
+      Object.keys(data).forEach((k) => map.set(k, data[k]))
+      return map
+    },
+    params,
+    initialValue
+  )
+
+  return resource
+}
+
+export const useResourceConst = <I, O>(
+  scope: string,
+  factory: Factory<I, O>,
+  params: I,
+  initialValue: O
+): ResourceType<I, O> => {
+  const pool = useContext(PoolCtx)
+  const resource = useResource<I, O>(
+    async (_params) => {
+      const hash = `${scope}#${JSON.stringify(params)}`
+      const map = pool.get<O>('const')
+      let data = map.get(hash)
+      if (data === undefined) {
+        data = await factory(_params)
+      }
+      map.set(hash, data)
+      return data
+    },
+    params,
+    initialValue
+  )
   return resource
 }
 
