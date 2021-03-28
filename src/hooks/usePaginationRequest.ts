@@ -13,8 +13,7 @@ interface PaginationData<T> {
   [key: string]: any
 }
 
-export interface ResourceWithPagination<I = any, O = any>
-  extends ResourceType<I, O> {
+export interface ResourceWithPagination<I = any, O = any> extends ResourceType<I, O> {
   pagination: PaginationProps
   setFilters: (v: object) => void
 }
@@ -57,12 +56,7 @@ type UsePagination = ({
   options: UsePaginationRequestOptions
 }) => PaginationProps
 
-const usePagination: UsePagination = ({
-  value: pageNumber,
-  onChange,
-  total,
-  options,
-}) => {
+const usePagination: UsePagination = ({ value: pageNumber, onChange, total, options }) => {
   const { pageSize } = options
   return {
     onChange,
@@ -79,9 +73,7 @@ type PaginationParams = {
 }
 type PaginationRequestParams<T> = T | PaginationParams
 
-export const configUsePaginationRequest = (
-  options: Partial<UsePaginationRequestOptions>
-) => {
+export const configUsePaginationRequest = (options: Partial<UsePaginationRequestOptions>) => {
   configuredOptions = {
     ...configuredOptions,
     ...options,
@@ -94,25 +86,36 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
   initOutput?: PaginationData<O>,
   opt?: Partial<UsePaginationRequestOptions>
 ) => {
+  type CombineParams = I & any
+  // type CombineParams = I & { pageSize: number; pageNumber: number }
   const options = { ...configuredOptions, ...opt }
-  const [pageNumber, setPageNumber] = useState(1)
-  const [filters, _setFilters] = useState({})
   const { totalName, pageSize, pageNumberName } = options
-  const { data, sync, ...rest } = useRequest<
-    PaginationRequestParams<I>,
-    PaginationData<O>
-  >(
+
+  const [combinedParams, setCombinedParams] = useState<CombineParams>({
+    ...params,
+    pageSize,
+    pageNumber: 1,
+  })
+  const _setCombinedParams = (args: Partial<CombineParams>) =>
+    setCombinedParams({ ...combinedParams, ...args })
+
+  const requestParams: any = { ...combinedParams, [pageNumberName]: combinedParams.pageNumber }
+  delete requestParams.pageNumber
+
+  const { data, sync, ...rest } = useRequest<PaginationRequestParams<I>, PaginationData<O>>(
     options.method,
     url,
-    { ...params, pageSize, [pageNumberName]: pageNumber, ...filters },
+    requestParams,
     initOutput || { list: [], [totalName]: 0 },
-    { autoSync: false, ...options }
+    options
   )
 
   const pagination = usePagination({
-    value: pageNumber,
+    value: combinedParams.pageNumber,
     onChange: (page: number) => {
-      setPageNumber(page)
+      _setCombinedParams({
+        pageNumber: page,
+      })
     },
     options,
     total: data[totalName],
@@ -120,7 +123,10 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
   const paramsId = JSON.stringify(params)
 
   useEffect(() => {
-    setPageNumber(1)
+    _setCombinedParams({
+      ...params,
+      pageNumber: 1,
+    })
   }, [paramsId])
 
   return {
@@ -129,8 +135,10 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
     ...rest,
     pagination,
     setFilters(filters) {
-      setPageNumber(1)
-      _setFilters(filters)
+      _setCombinedParams({
+        pageNumber: 1,
+        ...filters,
+      })
     },
   }
 }
