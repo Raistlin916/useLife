@@ -1,6 +1,8 @@
 import { HttpMethod, UseRequestOptions } from './useRequest';
 import { ResourceType } from './useResource';
 interface PaginationProps {
+    onChange: (page: number, pageSize: number) => void;
+    current: number;
 }
 interface PaginationData<T> {
     list: T[];

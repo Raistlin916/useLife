@@ -6,14 +6,18 @@ import useRequest, {
 } from './useRequest'
 import { ResourceType } from './useResource'
 
-interface PaginationProps {}
+interface PaginationProps {
+  onChange: (page: number, pageSize: number) => void
+  current: number
+}
 
 interface PaginationData<T> {
   list: T[]
   [key: string]: any
 }
 
-export interface ResourceWithPagination<I = any, O = any> extends ResourceType<I, O> {
+export interface ResourceWithPagination<I = any, O = any>
+  extends ResourceType<I, O> {
   pagination: PaginationProps
   setFilters: (v: object) => void
 }
@@ -56,7 +60,12 @@ type UsePagination = ({
   options: UsePaginationRequestOptions
 }) => PaginationProps
 
-const usePagination: UsePagination = ({ value: pageNumber, onChange, total, options }) => {
+const usePagination: UsePagination = ({
+  value: pageNumber,
+  onChange,
+  total,
+  options,
+}) => {
   const { pageSize } = options
   return {
     onChange,
@@ -73,7 +82,9 @@ type PaginationParams = {
 }
 type PaginationRequestParams<T> = T | PaginationParams
 
-export const configUsePaginationRequest = (options: Partial<UsePaginationRequestOptions>) => {
+export const configUsePaginationRequest = (
+  options: Partial<UsePaginationRequestOptions>
+) => {
   configuredOptions = {
     ...configuredOptions,
     ...options,
@@ -99,10 +110,16 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
   const _setCombinedParams = (args: Partial<CombineParams>) =>
     setCombinedParams({ ...combinedParams, ...args })
 
-  const requestParams: any = { ...combinedParams, [pageNumberName]: combinedParams.pageNumber }
+  const requestParams: any = {
+    ...combinedParams,
+    [pageNumberName]: combinedParams.pageNumber,
+  }
   delete requestParams.pageNumber
 
-  const { data, sync, ...rest } = useRequest<PaginationRequestParams<I>, PaginationData<O>>(
+  const { data, sync, ...rest } = useRequest<
+    PaginationRequestParams<I>,
+    PaginationData<O>
+  >(
     options.method,
     url,
     requestParams,
