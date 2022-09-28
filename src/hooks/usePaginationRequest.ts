@@ -36,6 +36,7 @@ export interface UsePaginationRequestOptions extends UseRequestOptions {
   pageSize: number
   pageNumberName: string
   totalName: string
+  resetPageNumberOnParamsChange: boolean
 }
 
 const defaultOptions: UsePaginationRequestOptions = {
@@ -44,6 +45,7 @@ const defaultOptions: UsePaginationRequestOptions = {
   pageSize: 10,
   pageNumberName: 'pageNo',
   totalName: 'count',
+  resetPageNumberOnParamsChange: true,
 }
 
 let configuredOptions: UsePaginationRequestOptions = defaultOptions
@@ -140,11 +142,13 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
   const paramsId = JSON.stringify(params)
 
   useEffect(() => {
-    _setCombinedParams({
-      ...params,
-      pageNumber: 1,
-    })
-  }, [paramsId])
+    if (options.resetPageNumberOnParamsChange) {
+      _setCombinedParams({
+        ...params,
+        pageNumber: 1,
+      })
+    }
+  }, [paramsId, options.resetPageNumberOnParamsChange])
 
   return {
     data,

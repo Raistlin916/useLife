@@ -20,6 +20,7 @@ export interface UsePaginationRequestOptions extends UseRequestOptions {
     pageSize: number;
     pageNumberName: string;
     totalName: string;
+    resetPageNumberOnParamsChange: boolean;
 }
 export declare const configUsePaginationRequest: (options: Partial<UsePaginationRequestOptions>) => void;
 declare const usePaginationRequest: UsePaginationRequest;
