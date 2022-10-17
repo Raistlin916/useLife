@@ -142,12 +142,14 @@ const usePaginationRequest: UsePaginationRequest = <I, O>(
   const paramsId = JSON.stringify(params)
 
   useEffect(() => {
-    if (options.resetPageNumberOnParamsChange) {
-      _setCombinedParams({
-        ...params,
-        pageNumber: 1,
-      })
-    }
+    _setCombinedParams(
+      options.resetPageNumberOnParamsChange
+        ? {
+            ...params,
+            pageNumber: 1,
+          }
+        : { ...params }
+    )
   }, [paramsId, options.resetPageNumberOnParamsChange])
 
   return {
